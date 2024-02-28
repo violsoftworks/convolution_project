@@ -27,27 +27,43 @@ class Convolution2D:
         self.kernel = kernel
 
     def convolve(self, image):
-        kernel = np.flipud(np.fliplr(self.kernel))  # Flip the kernel
-        kernel_height, kernel_width = kernel.shape
-        pad_height = kernel_height // 2
-        pad_width = kernel_width // 2
-        padded_image = np.pad(image, ((pad_height, pad_height), (pad_width, pad_width)), mode='constant')
-        
-        image_height, image_width = image.shape
+        # Get the dimensions of the image and the kernel
+        xKernShape = self.kernel.shape[0]
+        yKernShape = self.kernel.shape[1]
+        xImgShape = image.shape[0]
+        yImgShape = image.shape[1]
+
+        # Create an output array with the same size as the image
         output = np.zeros_like(image)
-        for y in range(image_height):
-            for x in range(image_width):
-                output[y, x] = np.sum(padded_image[y:y+kernel_height, x:x+kernel_width] * kernel)
+
+        # Pad the borders of the input image
+        pad = xKernShape // 2
+        image_padded = np.pad(image, ((pad, pad), (pad, pad), (0, 0)))
+
+        # Convolution operation
+        for y in range(image.shape[1]):
+            for x in range(image.shape[0]):
+                for c in range(image.shape[2]):
+                    output[x, y, c] = (self.kernel * image_padded[x: x + xKernShape, y: y + yKernShape, c]).sum()
+
         return output
-kernel = np.array([[1, 0, -1],
-                   [1, 0, -1],
-                   [1, 0, -1]])
+
+kernel = np.array([[1, 0, 1],
+                   [1, 2, 1],
+                   [1, 3, 1]])
 
 convolution = Convolution2D(kernel)
 
 convolved_image = convolution.convolve(image)
+# Normalize to 0-255
+convolved_image = convolved_image - convolved_image.min()
+convolved_image = convolved_image / convolved_image.max() * 255
 
-print("Original Image:")
-print(image)
-print("\nConvolved Image:")
-print(convolved_image)
+# Convert to 8-bit unsigned integer format
+convolved_image = convolved_image.astype(np.uint8)
+
+# Convert the numpy array to an image
+convolved_image_pil = Image.fromarray(convolved_image)
+
+# Save the image
+convolved_image_pil.save('watermelon_convolved.png')
